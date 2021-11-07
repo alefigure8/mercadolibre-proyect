@@ -7,62 +7,62 @@ const cheerio = require("cheerio");
 const app = express();
 
 //API RESPONSE
-const newspapers = [{
+const mercadolibre = [{
         name: 'page',
         address: 'url',
         base: ''
     },
 
 ];
-const articles = [];
+const post = [];
 
 //ROUTE
 app.get("/", (req, res) => {
     res.json("Welcome to my *** Change News API");
 });
 
-newspapers.forEach((newspaper) => {
+mercadolibre.forEach((ml) => {
     axios
-        .get(newspaper.address)
+        .get(ml.address)
         .then((response) => {
             const html = response.data;
             const $ = cheerio.load(html);
             $('a:contains("***")', html).each((i, el) => {
                 const title = $(el).text();
                 const url = $(el).attr("href");
-                articles.push({
+                post.push({
                     title,
-                    url: newspaper.base + url,
-                    source: newspaper.name,
+                    url: ml.base + url,
+                    source: ml.name,
                 });
             });
         })
         .catch((err) => console.log(err));
 });
 
-app.get("/news", (req, res) => {
-    res.json(articles);
+app.get("/post", (req, res) => {
+    res.json(post);
 });
 
 app.get("/news/:newspaperID", (req, res) => {
     const id = req.params.newspaperID;
-    const newspaper = newspapers.filter((newspaper) => newspaper.name === id)[0];
+    const ml = mercadolibre.filter((ml) => ml.name === id)[0];
     axios
-        .get(newspaper.address)
+        .get(ml.address)
         .then((response) => {
             const html = response.data;
             const $ = cheerio.load(html);
-            const specificArticles = [];
+            const specificpost = [];
             $('a:contains("***")', html).each((i, el) => {
                 const title = $(el).text();
                 const url = $(el).attr("href");
-                specificArticles.push({
+                specificpost.push({
                     title,
-                    url: newspaper.base + url,
-                    source: newspaper.name,
+                    url: ml.base + url,
+                    source: ml.name,
                 });
             });
-            res.json(specificArticles);
+            res.json(specificpost);
         })
         .catch((err) => console.log(err));
 });
