@@ -8,10 +8,10 @@ const app = express();
 
 //API RESPONSE
 const mercadolibre = [{
-    name: "Silla Gamer",
+    name: "silla-gamer",
     address: "https://listado.mercadolibre.com.ar/silla-gamer",
     base: "",
-}, ];
+}];
 
 //Return
 const post = [];
@@ -20,6 +20,8 @@ const post = [];
 app.get("/", (req, res) => {
     res.json("API Mercado Libre");
 });
+
+//TODO: error id, img
 
 mercadolibre.forEach((ml) => {
     axios
@@ -32,11 +34,11 @@ mercadolibre.forEach((ml) => {
                 let price = $(el).find(".price-tag-fraction").html();
                 const url = $(el).find(".ui-search-link").attr("href");
                 let id = url.split('#')[0].split('/').slice(-1).join();
-                const opinions = $(el).find(".ui-search-reviews__amount").text();
+                let opinions = $(el).find(".ui-search-reviews__amount").text();
+                if (opinions === '') { opinions = 'Sin opiniones' };
                 let cuotas = $(el).find(".ui-search-color--LIGHT_GREEN").text();
-                if (cuotas === '') {
-                    cuotas = 'Sin cuotas'
-                }
+                if (cuotas === '') { cuotas = 'Sin cuotas' };
+
                 post.push({
                     id,
                     title,
@@ -67,31 +69,50 @@ mercadolibre.forEach((ml) => {
 
 app.get("/post", async(req, res) => {
     //Compare and sort
-    res.json(post.sort((a, b) => b.rating - a.rating));
+    await res.json(post.sort((a, b) => b.rating - a.rating));
 });
 
 app.get("/post/:postId", (req, res) => {
     const id = req.params.postId;
     const ml = mercadolibre.filter((ml) => ml.name === id)[0];
+    const specificpost = [];
     axios
         .get(ml.address)
         .then((response) => {
             const html = response.data;
             const $ = cheerio.load(html);
-            const specificpost = [];
             $("div .ui-search-result__content-wrapper", html).each((i, el) => {
-                const title = $(el).text();
-                const price = Number($(el).find(".ui-search-item__group--price"));
-                const url = $(el).attr("href");
+                const title = $(el).find("h2").text();
+                let price = $(el).find(".price-tag-fraction").html();
+                const url = $(el).find(".ui-search-link").attr("href");
+                let id = url.split('#')[0].split('/').slice(-1).join();
+                let opinions = $(el).find(".ui-search-reviews__amount").text();
+                if (opinions === '') { opinions = 'Sin opiniones' };
+                let cuotas = $(el).find(".ui-search-color--LIGHT_GREEN").text();
+                if (cuotas === '') { cuotas = 'Sin cuotas' };
                 specificpost.push({
+                    id,
                     title,
                     price,
-                    rating,
-                    img,
+                    rating: '',
+                    opinions,
+                    cuotas,
                     url: ml.base + url,
                     source: ml.name,
                 });
             });
+        })
+        .then(() => {
+            for (let i in post) {
+                const { url } = post[i]
+                axios
+                    .get(url)
+                    .then(response => {
+                        const html = response.data;
+                        const $ = cheerio.load(html)
+                        post[i].rating = $('.ui-pdp-reviews__rating__summary__average').text()
+                    })
+            }
             res.json(specificpost);
         })
         .catch((err) => console.log(err));
